@@ -243,6 +243,17 @@
         });
 
         // Initialize Firebase
+        // __app_id and __firebase_config are global variables expected to be provided by the Canvas environment.
+        // If running this code outside of Canvas, you would need to manually define these:
+        // const appId = 'YOUR_FIREBASE_APP_ID'; // e.g., 'my-roadmap-app-12345'
+        // const firebaseConfig = {
+        //   apiKey: "YOUR_API_KEY",
+        //   authDomain: "YOUR_AUTH_DOMAIN",
+        //   projectId: "YOUR_PROJECT_ID",
+        //   storageBucket: "YOUR_STORAGE_BUCKET",
+        //   messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        //   appId: "YOUR_APP_ID_FROM_FIREBASE"
+        // };
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 
