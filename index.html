@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Roadmap & Timetable Generator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .card {
+            background-color: #fff;
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        input[type="text"],
+        input[type="date"],
+        input[type="number"],
+        select,
+        textarea {
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            width: 100%;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        input[type="number"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #4f46e5; /* Indigo 600 */
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); /* Indigo 500 with opacity */
+        }
+        button {
+            background-color: #6366f1; /* Indigo 500 */
+            color: #fff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s, transform 0.1s;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        button:hover {
+            background-color: #4f46e5; /* Indigo 600 */
+            transform: translateY(-1px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            flex-direction: column;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #6366f1;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            text-align: center;
+        }
+        .roadmap-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            background-color: #f9fafb;
+        }
+        .timetable-day {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            background-color: #f9fafb;
+        }
+        .difficulty-easy { background-color: #d1fae5; color: #065f46; } /* Green 100 / Green 800 */
+        .difficulty-medium { background-color: #fef3c7; color: #92400e; } /* Yellow 100 / Yellow 800 */
+        .difficulty-hard { background-color: #fee2e2; color: #991b1b; } /* Red 100 / Red 800 */
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p class="mt-4 text-lg font-semibold text-indigo-600">Generating your personalized plan...</p>
+    </div>
+
+    <div id="custom-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3 id="modal-title" class="text-xl font-bold mb-4"></h3>
+            <p id="modal-message" class="mb-6"></p>
+            <button id="modal-close-button" class="px-6 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600">Close</button>
+        </div>
+    </div>
+
+    <div class="container py-8">
+        <h1 class="text-4xl font-extrabold text-center text-indigo-700 mb-10">AI-Powered Roadmap & Timetable Generator</h1>
+
+        <div class="card">
+            <h2 class="text-2xl font-bold text-indigo-600 mb-6">Your Learning Goal</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="topic" class="block text-sm font-medium text-gray-700 mb-2">Learning Topic/Goal</label>
+                    <input type="text" id="topic" placeholder="e.g., Java backend development" class="focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="deadline" class="block text-sm font-medium text-gray-700 mb-2">Deadline</label>
+                    <input type="date" id="deadline" class="focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="hoursPerDay" class="block text-sm font-medium text-gray-700 mb-2">Hours per Day</label>
+                    <input type="number" id="hoursPerDay" min="1" max="24" value="2" class="focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="skillLevel" class="block text-sm font-medium text-gray-700 mb-2">Skill Level</label>
+                    <select id="skillLevel" class="focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="Beginner">Beginner</option>
+                        <option value="Intermediate">Intermediate</option>
+                        <option value="Advanced">Advanced</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-8 flex justify-center">
+                <button id="generate-btn" class="flex items-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m6.364 16.364l-.707-.707M12 21v-1m-6.364-1.636l-.707.707M18 10a8 8 0 11-16 0 8 8 0 0116 0z"></path></svg>
+                    <span>Generate Roadmap & Timetable</span>
+                </button>
+            </div>
+            <p class="text-center text-sm text-gray-500 mt-4">Your User ID: <span id="user-id" class="font-mono text-indigo-600">Loading...</span></p>
+        </div>
+
+        <div class="card" id="roadmap-section" style="display: none;">
+            <h2 class="text-2xl font-bold text-indigo-600 mb-6">Your Personalized Roadmap</h2>
+            <div id="roadmap-output">
+                <!-- Roadmap items will be dynamically inserted here -->
+            </div>
+        </div>
+
+        <div class="card" id="timetable-section" style="display: none;">
+            <h2 class="text-2xl font-bold text-indigo-600 mb-6">Your Study Timetable</h2>
+            <div id="timetable-output">
+                <!-- Timetable days will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // Global variables for Firebase
+        let app;
+        let db;
+        let auth;
+        let userId = 'anonymous'; // Default to anonymous
+        let isAuthReady = false; // Flag to indicate if auth state is ready
+
+        // Custom Modal Functionality
+        function showModal(title, message) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-message').innerText = message;
+            document.getElementById('custom-modal').classList.remove('hidden');
+        }
+
+        document.getElementById('modal-close-button').addEventListener('click', () => {
+            document.getElementById('custom-modal').classList.add('hidden');
+        });
+
+        // Initialize Firebase
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+
+        if (Object.keys(firebaseConfig).length > 0) {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    document.getElementById('user-id').innerText = userId;
+                } else {
+                    // Sign in anonymously if no user is found
+                    try {
+                        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                        userId = auth.currentUser.uid;
+                        document.getElementById('user-id').innerText = userId;
+                    } catch (error) {
+                        console.error("Error signing in:", error);
+                        showModal("Authentication Error", "Failed to sign in. Please try again.");
+                    }
+                }
+                isAuthReady = true;
+                // Once auth is ready, set up Firestore listeners
+                setupFirestoreListeners();
+            });
+        } else {
+            console.error("Firebase config not found. Running in a limited mode without persistence.");
+            showModal("Configuration Error", "Firebase configuration is missing. Data persistence will not work.");
+            document.getElementById('user-id').innerText = "Not available (No Firebase)";
+            isAuthReady = true; // Allow app to function without persistence
+        }
+
+        // Firestore Listeners
+        function setupFirestoreListeners() {
+            if (!db || !isAuthReady) {
+                console.log("Firestore or Auth not ready, skipping listener setup.");
+                return;
+            }
+
+            const roadmapDocRef = doc(db, `artifacts/${appId}/users/${userId}/roadmaps`, 'currentRoadmap');
+
+            onSnapshot(roadmapDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.roadmap && data.timetable) {
+                        renderRoadmap(data.roadmap);
+                        renderTimetable(data.timetable);
+                        document.getElementById('roadmap-section').style.display = 'block';
+                        document.getElementById('timetable-section').style.display = 'block';
+                    }
+                } else {
+                    console.log("No existing roadmap found for this user.");
+                    document.getElementById('roadmap-section').style.display = 'none';
+                    document.getElementById('timetable-section').style.display = 'none';
+                }
+            }, (error) => {
+                console.error("Error listening to roadmap changes:", error);
+                showModal("Data Error", "Failed to load your roadmap. Please try generating it again.");
+            });
+        }
+
+        // Show/Hide Loading Overlay
+        function showLoading(message = "Generating your personalized plan...") {
+            document.getElementById('loading-overlay').classList.remove('hidden');
+            document.getElementById('loading-overlay').querySelector('p').innerText = message;
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-overlay').classList.add('hidden');
+        }
+
+        // Render Roadmap
+        function renderRoadmap(roadmap) {
+            const roadmapOutput = document.getElementById('roadmap-output');
+            roadmapOutput.innerHTML = '';
+            if (roadmap.length === 0) {
+                roadmapOutput.innerHTML = '<p class="text-center text-gray-500">No roadmap generated yet. Try again!</p>';
+                return;
+            }
+            roadmap.forEach((module, index) => {
+                const moduleElement = document.createElement('div');
+                moduleElement.classList.add('roadmap-item', 'mb-4', 'p-4', 'rounded-lg', 'shadow-sm', 'border', 'border-gray-200');
+                moduleElement.innerHTML = `
+                    <h3 class="text-xl font-semibold text-indigo-700 mb-2">${index + 1}. ${module.title}</h3>
+                    <p class="text-gray-700 mb-2">${module.description}</p>
+                    <div class="flex items-center text-sm text-gray-600">
+                        <span class="mr-4">Estimated: <span class="font-medium">${module.estimatedHours} hours</span></span>
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold ${getDifficultyClass(module.difficulty)}">
+                            ${module.difficulty}
+                        </span>
+                    </div>
+                `;
+                roadmapOutput.appendChild(moduleElement);
+            });
+        }
+
+        function getDifficultyClass(difficulty) {
+            switch (difficulty.toLowerCase()) {
+                case 'easy': return 'difficulty-easy';
+                case 'medium': return 'difficulty-medium';
+                case 'hard': return 'difficulty-hard';
+                default: return 'bg-gray-200 text-gray-700';
+            }
+        }
+
+        // Render Timetable
+        function renderTimetable(timetable) {
+            const timetableOutput = document.getElementById('timetable-output');
+            timetableOutput.innerHTML = '';
+            if (Object.keys(timetable).length === 0) {
+                timetableOutput.innerHTML = '<p class="text-center text-gray-500">No timetable generated yet. Try again!</p>';
+                return;
+            }
+
+            for (const date in timetable) {
+                const dayPlan = timetable[date];
+                const dayElement = document.createElement('div');
+                dayElement.classList.add('timetable-day', 'mb-4', 'p-4', 'rounded-lg', 'shadow-sm', 'border', 'border-gray-200');
+                dayElement.innerHTML = `
+                    <h3 class="text-xl font-semibold text-indigo-700 mb-3">${new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h3>
+                    <ul class="list-disc pl-5">
+                        ${dayPlan.map(item => `<li class="text-gray-700 mb-1">${item.title} (${item.hours} hours)</li>`).join('')}
+                    </ul>
+                `;
+                timetableOutput.appendChild(dayElement);
+            }
+        }
+
+        // Generate Roadmap & Timetable
+        document.getElementById('generate-btn').addEventListener('click', async () => {
+            const topic = document.getElementById('topic').value.trim();
+            const deadline = document.getElementById('deadline').value;
+            const hoursPerDay = parseInt(document.getElementById('hoursPerDay').value);
+            const skillLevel = document.getElementById('skillLevel').value;
+
+            if (!topic || !deadline || !hoursPerDay) {
+                showModal("Input Error", "Please fill in all the required fields: Topic, Deadline, and Hours per Day.");
+                return;
+            }
+
+            if (isNaN(hoursPerDay) || hoursPerDay <= 0 || hoursPerDay > 24) {
+                showModal("Input Error", "Hours per Day must be a positive number between 1 and 24.");
+                return;
+            }
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Normalize today's date
+            const deadlineDate = new Date(deadline);
+            deadlineDate.setHours(0, 0, 0, 0); // Normalize deadline date
+
+            if (deadlineDate < today) {
+                showModal("Input Error", "The deadline cannot be in the past. Please select a future date.");
+                return;
+            }
+
+            showLoading();
+
+            try {
+                // Step 1: Generate Roadmap using Gemini API
+                const prompt = `Generate a personalized learning roadmap and estimated timetable for a user who wants to learn '${topic}'.
+                The user is a '${skillLevel}' and wants to complete this by '${deadline}' studying '${hoursPerDay}' hours per day.
+                Provide the output as a JSON array of objects, where each object represents a module/topic.
+                Each module object should have the following properties:
+                - \`title\`: (string) The title of the module.
+                - \`description\`: (string) A brief description of the module.
+                - \`estimatedHours\`: (number) Estimated hours to complete this module. This should be a reasonable number for learning.
+                - \`difficulty\`: (string) 'Easy', 'Medium', or 'Hard'.
+                - \`prerequisites\`: (array of strings) Any modules that should be completed before this one (use module titles).
+                Ensure the roadmap is logical and progressive. Do not include any conversational text outside the JSON.
+                The total estimated hours across all modules should be realistic for the given deadline and daily study hours.`;
+
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+
+                const payload = {
+                    contents: chatHistory,
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    "title": { "type": "STRING" },
+                                    "description": { "type": "STRING" },
+                                    "estimatedHours": { "type": "NUMBER" },
+                                    "difficulty": { "type": "STRING", "enum": ["Easy", "Medium", "Hard"] },
+                                    "prerequisites": { "type": "ARRAY", "items": { "type": "STRING" } }
+                                },
+                                "required": ["title", "description", "estimatedHours", "difficulty", "prerequisites"]
+                            }
+                        }
+                    }
+                };
+
+                const apiKey = ""; // Canvas will automatically provide the API key
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                let roadmap = [];
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const jsonText = result.candidates[0].content.parts[0].text;
+                    try {
+                        roadmap = JSON.parse(jsonText);
+                        if (!Array.isArray(roadmap)) {
+                            throw new Error("AI response is not a JSON array.");
+                        }
+                    } catch (parseError) {
+                        console.error("Failed to parse AI response JSON:", parseError);
+                        showModal("AI Response Error", "Could not understand the AI's response. Please try again.");
+                        hideLoading();
+                        return;
+                    }
+                } else {
+                    showModal("AI Generation Failed", "The AI could not generate a roadmap. Please try again with a different topic or adjust parameters.");
+                    hideLoading();
+                    return;
+                }
+
+                // Step 2: Generate Timetable
+                const timetable = generateTimetable(roadmap, deadlineDate, hoursPerDay);
+
+                // Step 3: Save to Firestore
+                if (db && isAuthReady) {
+                    const roadmapDocRef = doc(db, `artifacts/${appId}/users/${userId}/roadmaps`, 'currentRoadmap');
+                    await setDoc(roadmapDocRef, {
+                        topic: topic,
+                        deadline: deadline,
+                        hoursPerDay: hoursPerDay,
+                        skillLevel: skillLevel,
+                        roadmap: roadmap,
+                        timetable: timetable,
+                        generatedAt: new Date().toISOString()
+                    });
+                    console.log("Roadmap and timetable saved to Firestore.");
+                } else {
+                    // If Firestore is not available, just render
+                    renderRoadmap(roadmap);
+                    renderTimetable(timetable);
+                    document.getElementById('roadmap-section').style.display = 'block';
+                    document.getElementById('timetable-section').style.display = 'block';
+                    showModal("Success!", "Roadmap and timetable generated. (Not saved as Firebase is not configured)");
+                }
+
+            } catch (error) {
+                console.error("Error generating roadmap or timetable:", error);
+                showModal("Generation Error", `An error occurred: ${error.message}. Please check your inputs and try again.`);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // Timetable Generation Logic
+        function generateTimetable(roadmap, deadlineDate, hoursPerDay) {
+            const timetable = {};
+            let currentDate = new Date();
+            currentDate.setHours(0, 0, 0, 0); // Start from today
+
+            // Sort roadmap by prerequisites (simple topological sort for MVP)
+            // This is a simplified sorting. A full topological sort would be more complex.
+            const sortedRoadmap = [];
+            const completedModules = new Set();
+            let modulesToProcess = [...roadmap];
+
+            while (modulesToProcess.length > 0) {
+                let foundModuleThisIteration = false;
+                for (let i = 0; i < modulesToProcess.length; i++) {
+                    const module = modulesToProcess[i];
+                    const allPrereqsMet = module.prerequisites.every(prereq => completedModules.has(prereq));
+
+                    if (allPrereqsMet) {
+                        sortedRoadmap.push(module);
+                        completedModules.add(module.title);
+                        modulesToProcess.splice(i, 1); // Remove from modules to process
+                        foundModuleThisIteration = true;
+                        break; // Restart loop to check for new available modules
+                    }
+                }
+                if (!foundModuleThisIteration && modulesToProcess.length > 0) {
+                    // This indicates a circular dependency or an unresolvable prerequisite.
+                    // For MVP, we'll just add remaining modules without strict order.
+                    console.warn("Circular dependency or unresolvable prerequisites detected. Adding remaining modules without strict order.");
+                    sortedRoadmap.push(...modulesToProcess);
+                    modulesToProcess = [];
+                }
+            }
+
+
+            let remainingHoursToday = hoursPerDay;
+            let currentModuleIndex = 0;
+
+            while (currentModuleIndex < sortedRoadmap.length && currentDate <= deadlineDate) {
+                const module = sortedRoadmap[currentModuleIndex];
+                let moduleRemainingHours = module.estimatedHours;
+
+                while (moduleRemainingHours > 0 && currentDate <= deadlineDate) {
+                    const dateString = currentDate.toISOString().split('T')[0];
+                    if (!timetable[dateString]) {
+                        timetable[dateString] = [];
+                        remainingHoursToday = hoursPerDay;
+                    }
+
+                    const hoursToAssign = Math.min(moduleRemainingHours, remainingHoursToday);
+
+                    if (hoursToAssign > 0) {
+                        timetable[dateString].push({
+                            title: module.title,
+                            hours: hoursToAssign,
+                            moduleId: module.title // Simple ID for now
+                        });
+                        moduleRemainingHours -= hoursToAssign;
+                        remainingHoursToday -= hoursToAssign;
+                    }
+
+                    if (moduleRemainingHours === 0) {
+                        currentModuleIndex++; // Move to next module
+                    }
+
+                    if (remainingHoursToday === 0) {
+                        currentDate.setDate(currentDate.getDate() + 1); // Move to next day
+                        currentDate.setHours(0, 0, 0, 0); // Reset time for the new day
+                        remainingHoursToday = hoursPerDay; // Reset daily hours
+                    } else if (moduleRemainingHours > 0) {
+                        // If module still has hours but daily limit reached, move to next day
+                        currentDate.setDate(currentDate.getDate() + 1);
+                        currentDate.setHours(0, 0, 0, 0);
+                        remainingHoursToday = hoursPerDay;
+                    }
+                }
+            }
+
+            // If some modules couldn't be scheduled within the deadline
+            if (currentModuleIndex < sortedRoadmap.length) {
+                console.warn("Some modules could not be scheduled within the given deadline.");
+                showModal("Warning", "Some modules could not be scheduled within the given deadline. You might need more time or study hours.");
+            }
+
+            return timetable;
+        }
+
+        // Initial setup on load
+        window.onload = function() {
+            // Set default deadline to 3 months from now
+            const defaultDeadline = new Date();
+            defaultDeadline.setMonth(defaultDeadline.getMonth() + 3);
+            document.getElementById('deadline').value = defaultDeadline.toISOString().split('T')[0];
+        };
+
+    </script>
+</body>
+</html>
